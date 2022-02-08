@@ -32,6 +32,7 @@ securityDefinitions:
 security:
   - ApiKeyAuth: []
   - OAuth2: []
+
 paths:
   /:
     x-summary: A root endpoint.
@@ -68,10 +69,7 @@ paths:
       summary: Provide a list of documents to index based on the input parameters.
       operationId: documentsList
       parameters:
-        - name: documentRequest
-          in: body
-          schema:
-            $ref: '#/definitions/DocumentRequest'
+        - $ref: '#/definitions/DocumentRequest'
       responses:
         200:
           description: A list of documents to index.
@@ -206,6 +204,115 @@ paths:
         500:
           description: Internal server error.
 
+  /deleted:
+    post:
+      summary: Checks the list of document IDs and returns those that no longer exist in the source.
+      operationId: checkDeletedIds
+      parameters:
+        - $ref: '#/definitions/DeletedIdsRequest'
+      responses:
+        200:
+          description: The ids of deleted documents.
+          schema:
+            $ref: '#/definitions/DeletedIdsResponse'
+          examples:
+            {
+              "results": [
+                  "abcd"
+              ],
+              "errors": [ ]
+            }
+        400:
+          description: A generic error response.
+          schema:
+            $ref: '#/definitions/DeletedIdsResponse'
+          examples:
+            {
+              "results": null,
+              "errors": [
+                {
+                  "code": "CLIENT_CONNECT_FAILED",
+                  "message": "I am a big fat error. So there. Oh yeah, and the client connection failed."
+                }
+              ]
+            }
+        401:
+          description: Not authorized to use this resource.
+        403:
+          description: The access to this resource is forbidden.
+        500:
+          description: Internal server error.
+
+  /download:
+    post:
+      summary: Get a binary file using the data received in downloads for a document.
+      operationId: getFile
+      parameters:
+        - $ref: '#/definitions/FileRequest'
+      responses:
+        200:
+          description: Binary content.
+          schema:
+            $ref: '#/definitions/FileResponse'
+        400:
+          description: Errors list.
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        401:
+          description: Not authorized to use this resource.
+        403:
+          description: The access to this resource is forbidden.
+        500:
+          description: Internal server error.
+
+  /schema:
+    get:
+      summary: Returns a schema definition for a connector.
+      operationId: getSchema
+      parameters: []
+      responses:
+        200:
+          description: >-
+            Connector mappings. It's a list of fields and data types for a
+            document object.
+          schema:
+            $ref: '#/definitions/SchemaResponse'
+          examples:
+            {
+              "schema": {
+                "container": "text",
+                "extension": "text",
+                "created_at": "date",
+                "project": "text",
+                "description": "text",
+                "title": "text",
+                "body": "text",
+                "type": "text",
+                "slug": "text",
+                "assigned_to": "text",
+                "comments": "text",
+                "issue": "text",
+                "priority": "text",
+                "created_by": "text",
+                "url": "text",
+                "size": "number",
+                "mime_type": "text",
+                "updated_by": "text",
+                "status": "text"
+              },
+              "errors": [ ]
+            }
+        400:
+          description: Errors list.
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        401:
+          description: Not authorized to use this resource.
+        403:
+          description: The access to this resource is forbidden.
+        500:
+          description: Internal server error.
+
 
 definitions:
   ServiceStatusResponse:
@@ -229,6 +336,7 @@ definitions:
         description: A status code from the content provider that explains its status data. May be an HTTP status; or can be something internal for the service.
     required:
       - status
+
   ConnectorConfigurationResponse:
     title: ConnectorConfigurationResponse
     type: object
@@ -239,12 +347,14 @@ definitions:
       {
         "description": "You know, for pulling content for ingestion. Burp."
       }
+
   ServiceStatusEnum:
     title: ServiceStatusEnum
     type: string
     enum:
       - UP
       - DOWN
+
   DocumentListResponse:
     title: DocumentListResponse
     description: List of documents, exposed for ingestion.
@@ -259,6 +369,7 @@ definitions:
         minItems: 0
         items:
           $ref: '#/definitions/Error'
+
   SingleDocumentResponse:
     title: SingleDocumentResponse
     description: A single document, exposed for ingestion.
@@ -271,6 +382,7 @@ definitions:
         minItems: 0
         items:
           $ref: '#/definitions/Error'
+
   Document:
     title: Document
     description: A document definition.
@@ -282,6 +394,7 @@ definitions:
     required:
       - id
     additionalProperties: true
+
   DocumentRequest:
     title: DocumentRequest
     description: A document request.
@@ -298,8 +411,50 @@ definitions:
           Timeout in milliseconds for the operation to end.
           On timing out, the client should either retry, or increase the timeout.
           default: 5000
-
     additionalProperties: false
+
+  DeletedIdsRequest:
+    title: DeletedIdsRequest
+    description: JSON list of IDs to check for existence.
+    type: object
+    properties:
+      ids:
+        type: array
+        description: >-
+          JSON list of IDs to check for existence.
+        items:
+          minLength: 1
+          type: string
+    additionalProperties: false
+
+  DeletedIdsResponse:
+    title: DeletedIdsResponse
+    description: IDs that no longer exist provided in a list of results, or a list of errors.
+    type: object
+    properties:
+      results:
+        type: array
+        description: >-
+          IDs that no longer exist in a third party content source.
+        items:
+          minLength: 1
+          type: string
+      errors:
+        type: array
+        $ref: '#/definitions/Error'
+    additionalProperties: false
+
+  FileRequest:
+    title: FileRequest
+    description: Whatever the connector sent in a download field on the document (not necessaryly JSON).
+    type: string
+
+  FileResponse:
+    title: FileResponse
+    description: Streams binary file content to the client (as multipart/form-data).
+    type: string
+    format: binary
+
   Error:
     title: Error
     description: An error with a code and error message. Both are strings to allow for more flexibility.
@@ -312,3 +467,35 @@ definitions:
     required:
       - code
       - message
+
+  ErrorResponse:
+    title: ErrorResponse
+    description: A list of errors.
+    type: object
+    properties:
+      errors:
+        type: array
+        $ref: '#/definitions/Error'
+    additionalProperties: true
+
+  SchemaResponse:
+    title: SchemaResponse
+    description: >-
+      A list of mappings for documents that connector provides for ingestion, or a list of errors.
+    type: object
+    properties:
+      schema:
+        $ref: '#/definitions/SchemaObject'
+      errors:
+        type: array
+        items:
+          $ref: '#/definitions/Error'
+    additionalProperties: false
+
+  SchemaObject:
+    title: SchemaObject
+    description: A list of mappings for documents that connector provides for ingestion.
+    additionalProperties: true
+
+
+
