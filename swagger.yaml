@@ -1,0 +1,298 @@
+swagger: '2.0'
+info:
+  version: '1.0'
+  title: "connector-api"
+  description: >-
+    External Connector API is an API that stands between the EXternal Connector implementation
+    and the Enterprise Search (Workplace Search). It is pull-based, meaning that there will be only GET
+    methods in it, which will allow Workplace Search to pull content based on the schedule that
+    Workplace Search implements and supports.
+  license:
+    name: MIT
+    url: https://github.com/apiaryio/polls-api/blob/master/LICENSE
+host: external.connector.api
+basePath: /
+schemes:
+  - https
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /:
+    x-summary: A root endpoint.
+    get:
+      summary: Returns the configuration and abilities of the connector.
+      responses:
+        200:
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/ConnectorConfigurationResponse'
+  /status:
+    x-summary: Returns the status of the connector.
+    get:
+      summary: This endpoint is supposed to show both the status of the external connector, as well as the status of a third-party content provider.
+      operationId: serviceStatus
+      responses:
+        200:
+          description: A JSON object describing the general service status and that of a third party content provider.
+          schema:
+            $ref: '#/definitions/ServiceStatusResponse'
+          examples:
+            {
+              "status": "UP",
+              "statusMessage": "I am up and running",
+              "contentProviderStatus": "DOWN",
+              "contentProviderStatusMessage": "Too many requests",
+              "contentProviderStatusCode": "429"
+            }
+  /documents:
+    x-summary: Provide a list of documents to index.
+    post:
+      summary: Provide a list of documents to index based on the input parameters.
+      operationId: documentsList
+      parameters:
+        - name: documentRequest
+          in: body
+          schema:
+            $ref: '#/definitions/DocumentRequest'
+      responses:
+        200:
+          description: A list of documents to index.
+          schema:
+            $ref: '#/definitions/DocumentListResponse'
+          examples:
+            withoutPermissions:
+              {
+                "results": [
+                  {
+                    "id": "so7mgSrdgRq+RJe0",
+                    "publishedDate": "2022-02-03T13:46:55.648Z",
+                    "type": "page",
+                    "title": "Example Document",
+                    "url": "https://www.example.com/somePath/example",
+                    "body": "Example Domain\nThis domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission."
+                  },
+                    "download": [
+                        "attachment_id_1",
+                        "attachment_id_2"
+                    ]
+                ]
+              }
+            withPermissions:
+              {
+                "results": [
+                  {
+                    "id": "so7mgSrdgRq+RJe0",
+                    "publishedDate": "2022-02-03T13:46:55.648Z",
+                    "type": "page",
+                    "title": "Example Document",
+                    "url": "https://www.example.com/somePath/example",
+                    "body": "Example Domain\nThis domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission.",
+                    "allow_permissions": [
+                        "john.doe@gmail.com"
+                    ],
+                    "deny_permissions": [
+                        "jane.doe@gmail.com"
+                    ]
+                  }
+                ],
+                "errors": []
+              }
+            freeForm:
+              {
+                "results": [
+                  {
+                    "authorLastName": "Jane",
+                    "authorFirstName": "Austen",
+                    "isbn": "ISBN12345",
+                    "publisher": "Penguin Books",
+                    "publishYear": 1998,
+                    "country": "UK",
+                    "title": "Pride and Prejudice",
+                    "rating": 5.0
+                  }
+                ],
+                "errors": []
+              }
+        400:
+          description: A generic error response.
+          schema:
+            $ref: '#/definitions/DocumentListResponse'
+          examples:
+            {
+              "results": [ ],
+              "errors": [
+                {
+                  "code": "CLIENT_CONNECT_FAILED",
+                  "message": "I am a big fat error. So there. Oh yeah, and the client connection failed."
+                }
+              ]
+            }
+        401:
+          description: Not authorized to use this resource.
+        403:
+          description: The access to this resource is forbidden.
+        500:
+          description: Internal server error.
+  /documents/{id}:
+    x-summary: Get a single document by its ID.
+    get:
+      summary: Get a single document by its unique ID.
+      operationId: singleDocument
+      parameters:
+        - name: id
+          type: string
+          required: true
+          in: path
+          description: The unique ID by which a document can be identified.
+      responses:
+        200:
+          description: A document in its JSON form.
+          schema:
+            $ref: '#/definitions/SingleDocumentResponse'
+          examples:
+            withAttachments:
+              {
+                "results": [
+                  {
+                    "id": "so7mgSrdgRq+RJe0",
+                    "publishedDate": "2022-02-03T13:46:55.648Z",
+                    "type": "page",
+                    "title": "Example Document",
+                    "url": "https://www.example.com/somePath/example",
+                    "body": "Example Domain\nThis domain is for use in illustrative examples in documents. You may use this domain in literature without prior coordination or asking for permission."
+                  },
+                    "download": [
+                        "attachment_id_1",
+                        "attachment_id_2"
+                    ]
+                ]
+              }
+        400:
+          description: A generic error response.
+          schema:
+            $ref: '#/definitions/SingleDocumentResponse'
+          examples:
+            {
+              "result": null,
+              "errors": [
+                {
+                  "code": "CLIENT_CONNECT_FAILED",
+                  "message": "I am a big fat error. So there. Oh yeah, and the client connection failed."
+                }
+              ]
+            }
+        401:
+          description: Not authorized to use this resource.
+        403:
+          description: The access to this resource is forbidden.
+        500:
+          description: Internal server error.
+
+
+definitions:
+  ServiceStatusResponse:
+    title: ServiceStatusResponse
+    type: object
+    properties:
+      status:
+        description: Whether the external connector service itself is UP or DOWN.
+        $ref: '#/definitions/ServiceStatusEnum'
+      statusMessage:
+        description: A message explaining the status (if needed). Extra information about the application state.
+        type: string
+      contentProviderStatus:
+        description: Whether the third-party service that provides the content is UP or DOWN.
+        $ref: '#/definitions/ServiceStatusEnum'
+      contentProviderStatusMessage:
+        type: string
+        description: A message explaining the status (if needed). Extra information about the service state.
+      contentProviderStatusCode:
+        type: string
+        description: A status code from the content provider that explains its status data. May be an HTTP status; or can be something internal for the service.
+    required:
+      - status
+  ConnectorConfigurationResponse:
+    title: ConnectorConfigurationResponse
+    type: object
+    properties:
+      description:
+        type: string
+    example:
+      {
+        "description": "You know, for pulling content for ingestion. Burp."
+      }
+  ServiceStatusEnum:
+    title: ServiceStatusEnum
+    type: string
+    enum:
+      - UP
+      - DOWN
+  DocumentListResponse:
+    title: DocumentListResponse
+    description: List of documents, exposed for ingestion.
+    type: object
+    properties:
+      results:
+        type: array
+        items:
+          $ref: '#/definitions/Document'
+      errors:
+        type: array
+        minItems: 0
+        items:
+          $ref: '#/definitions/Error'
+  SingleDocumentResponse:
+    title: SingleDocumentResponse
+    description: A single document, exposed for ingestion.
+    type: object
+    properties:
+      result:
+        $ref: '#/definitions/Document'
+      errors:
+        type: array
+        minItems: 0
+        items:
+          $ref: '#/definitions/Error'
+  Document:
+    title: Document
+    description: A document definition.
+    type: object
+    properties:
+      id:
+        type: string
+        description: A unique ID of the document.
+    required:
+      - id
+    additionalProperties: true
+  DocumentRequest:
+    title: DocumentRequest
+    description: A document request.
+    type: object
+    properties:
+      modifiedSince:
+        type: string
+        description: >-
+          The modification date to be used as a lower limit for getting the documents. If omitted, should get
+          the full list of documents available.
+      timeoutMs:
+        type: integer
+        description: >-
+          Timeout in milliseconds for the operation to end.
+          On timing out, the client should either retry, or increase the timeout.
+          default: 5000
+
+    additionalProperties: false
+  Error:
+    title: Error
+    description: An error with a code and error message. Both are strings to allow for more flexibility.
+    properties:
+      code:
+        type: string
+        default: SERVICE_ERROR
+      message:
+        type: string
+    required:
+      - code
+      - message
