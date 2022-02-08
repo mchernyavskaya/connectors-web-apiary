@@ -1,7 +1,7 @@
 swagger: '2.0'
 info:
   version: '1.0'
-  title: "connector-api"
+  title: "connector-web-api"
   description: >-
     External Connector API is an API that stands between the EXternal Connector implementation
     and the Enterprise Search (Workplace Search). It is pull-based, meaning that there will be only GET
@@ -9,7 +9,7 @@ info:
     Workplace Search implements and supports.
   license:
     name: MIT
-    url: https://github.com/apiaryio/polls-api/blob/master/LICENSE
+    url: https://github.com/apiaryio/connector-web-api/blob/master/LICENSE
 host: external.connector.api
 basePath: /
 schemes:
@@ -18,6 +18,19 @@ consumes:
   - application/json
 produces:
   - application/json
+securityDefinitions:
+  ApiKeyAuth:
+    type: apiKey
+    in: header
+    name: Authorization
+  OAuth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: {baseUrl}/oauth/authorize
+    tokenUrl: {baseUrl}/oauth/token
+security:
+  - ApiKeyAuth: []
+  - OAuth2: []
 paths:
   /:
     x-summary: A root endpoint.
@@ -28,11 +41,13 @@ paths:
           description: A successful response.
           schema:
             $ref: '#/definitions/ConnectorConfigurationResponse'
+      security: [] # unsecured
   /status:
     x-summary: Returns the status of the connector.
     get:
       summary: This endpoint is supposed to show both the status of the external connector, as well as the status of a third-party content provider.
       operationId: serviceStatus
+      security: [] # unsecured
       responses:
         200:
           description: A JSON object describing the general service status and that of a third party content provider.
