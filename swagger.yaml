@@ -26,8 +26,9 @@ securityDefinitions:
   OAuth2:
     type: oauth2
     flow: accessCode
-    authorizationUrl: {baseUrl}/oauth/authorize
-    tokenUrl: {baseUrl}/oauth/token
+    authorizationUrl: https://example.com/oauth/authorize
+    tokenUrl: https://example.com/oauth/token
+
 security:
   - ApiKeyAuth: []
   - OAuth2: []
